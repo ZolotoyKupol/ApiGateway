@@ -3,33 +3,52 @@ package main
 import (
 	"net/http"
 	//"time"
+	"context"
+	"fmt"
+	"log"
+	//"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 )
 
 type Guest struct {
 	ID        string `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
-	//CheckIn time.Time `json:"check_in"`
-	//CheckOut time.Time `json:"check_out"`
 	RoomID int `json:"room_id"`
 }
 
-// TODO: убрать и исопльзоавть
-// var conn *pgx.Conn
-var guests = []Guest{
-	{ID: "1", FirstName: "Egor", LastName: "Dmitrienko", RoomID: 10},
-	{ID: "2", FirstName: "Egor", LastName: "Dmitrienko", RoomID: 10},
-	{ID: "3", FirstName: "Egor", LastName: "Dmitrienko", RoomID: 10},
+
+
+var db *pgx.Conn
+
+func initDB(connString string)  error {
+	var err error
+	db, err = pgx.Connect(context.Background(), connString)
+	if err != nil {
+		return fmt.Errorf("Не удалось подключиться к БД: %v", err)
+	}
+	fmt.Println("Успешно подключено к БД")
+	return nil
 }
 
-// connString example "postgres://postgres:postgres@postgres:5432/postgres"
+// var guests = []Guest{}
+	//{ID: "1", FirstName: "Egor", LastName: "Dmitrienko", RoomID: 10},
+	//{ID: "2", FirstName: "Egor", LastName: "Dmitrienko", RoomID: 10},
+	//{ID: "3", FirstName: "Egor", LastName: "Dmitrienko", RoomID: 10},
+//}
+
+
 // "postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/postgres"
-// func getConnect(connString string) (*pgx.Conn, error) {}
+
 
 func main() {
-	// conn, err := getConnect("postgres://postgres:postgres@postgres:5432/postgres")
+	connString := "postgres://postgres:postgres@localhost:5432/ApiGatway_db"
+	if err := initDB(connString); err != nil {
+		log.Fatalf("Ошибка инициализации БД: %v", err)
+	}
+
 	router := gin.Default()
 	router.GET("/guests", getAllGuests)
 	router.GET("/guests/:id", getGuestByID)
@@ -49,6 +68,23 @@ func main() {
 // func getAllGuest() id error
 
 func getAllGuests(c *gin.Context) {
+	rows, err := db.Query(context.Background(), "SELECT id, first_name, last_name, room_id FROM guests")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var guests []Guest
+	for rows.Next() {
+		var guest Guest
+		err := rows.Scan(&guest.ID, &guest.FirstName, &guest.LastName, &guest.RoomID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		guests = append(guests, guest)
+	}
 	c.IndentedJSON(http.StatusOK, guests)
 }
 
@@ -56,55 +92,77 @@ func postGuests(c *gin.Context) {
 	var newGuest Guest
 
 	if err := c.BindJSON(&newGuest); err != nil {
-		// возращай ошибку
+		// возварщай ошибку
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// guest, err := insertGuest(newGuest)
+	if newGuest.FirstName == "" || newGuest.LastName == "" || newGuest.RoomID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "все поля должны быть заполнены"})
+		return
+	}
 
-	guests = append(guests, newGuest)
+	err := db.QueryRow(context.Background(), "INSERT INTO guests (first_name, last_name, room_id) VALUES ($1, $2, $3) RETURNING id", newGuest.FirstName, newGuest.LastName, newGuest.RoomID).Scan(&newGuest.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ошибка добавления гостя"})
+		return
+	}
+	
 	c.IndentedJSON(http.StatusCreated, newGuest)
 }
 
 func getGuestByID(c *gin.Context) {
 	id := c.Param("id")
 
-	for _, a := range guests {
-		if a.ID == id {
-			c.IndentedJSON(http.StatusOK, a)
+	var guest Guest
+	err := db.QueryRow(context.Background(), "SELECT id, first_name, last_name, room_id FROM guests WHERE id = $1", id).Scan(&guest.ID, &guest.FirstName, &guest.LastName, &guest.RoomID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"message": "гость не найден"})
 			return
 		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "ошибка получения гостя"})
+		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "guest not found"})
+
+		c.IndentedJSON(http.StatusOK, guest)
 }
 
 func updateGuestbyID(c *gin.Context) {
 	id := c.Param("id")
-
 	var updatedGuest Guest
 	if err := c.BindJSON(&updatedGuest); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	for i, a := range guests {
-		if a.ID == id {
-			updatedGuest.ID = a.ID
-			guests[i] = updatedGuest
-			c.IndentedJSON(http.StatusOK, updatedGuest)
-			return
-		}
+	res, err := db.Exec(context.Background(), "UPDATE guests SET first_name = $1, last_name = $2, room_id = $3 WHERE id = $4", updatedGuest.FirstName, updatedGuest.LastName, updatedGuest.RoomID, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ошибка обновления гостя"})
+		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "guest not found"})
+
+	if res.RowsAffected() == 0 {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "гость не найден"})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "гость успешно обновлен"})
 }
 
 func deleteByID(c *gin.Context) {
 	id := c.Param("id")
 
-	for i, a := range guests {
-		if a.ID == id {
-			guests = append(guests[:i], guests[i+1])
-			break
-		}
+	res, err := db.Exec(context.Background(), "DELETE FROM guests WHERE id = $1", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ошибка удаления гостя"})
+		return
 	}
-	c.IndentedJSON(http.StatusOK, guests)
+
+	if res.RowsAffected() == 0 {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "гость не найден"})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "гость успешно удален"})
 }
