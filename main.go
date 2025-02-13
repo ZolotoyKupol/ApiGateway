@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+
 	//"os"
 
 	"github.com/gin-gonic/gin"
@@ -16,14 +17,12 @@ type Guest struct {
 	ID        string `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
-	RoomID int `json:"room_id"`
+	RoomID    int    `json:"room_id"`
 }
-
-
 
 var db *pgx.Conn
 
-func initDB(connString string)  error {
+func initDB(connString string) error {
 	var err error
 	db, err = pgx.Connect(context.Background(), connString)
 	if err != nil {
@@ -34,14 +33,12 @@ func initDB(connString string)  error {
 }
 
 // var guests = []Guest{}
-	//{ID: "1", FirstName: "Egor", LastName: "Dmitrienko", RoomID: 10},
-	//{ID: "2", FirstName: "Egor", LastName: "Dmitrienko", RoomID: 10},
-	//{ID: "3", FirstName: "Egor", LastName: "Dmitrienko", RoomID: 10},
+//{ID: "1", FirstName: "Egor", LastName: "Dmitrienko", RoomID: 10},
+//{ID: "2", FirstName: "Egor", LastName: "Dmitrienko", RoomID: 10},
+//{ID: "3", FirstName: "Egor", LastName: "Dmitrienko", RoomID: 10},
 //}
 
-
 // "postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/postgres"
-
 
 func main() {
 	connString := "postgres://postgres:postgres@localhost:5432/ApiGatway_db"
@@ -107,7 +104,7 @@ func postGuests(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "ошибка добавления гостя"})
 		return
 	}
-	
+
 	c.IndentedJSON(http.StatusCreated, newGuest)
 }
 
@@ -125,7 +122,7 @@ func getGuestByID(c *gin.Context) {
 		return
 	}
 
-		c.IndentedJSON(http.StatusOK, guest)
+	c.IndentedJSON(http.StatusOK, guest)
 }
 
 func updateGuestbyID(c *gin.Context) {
