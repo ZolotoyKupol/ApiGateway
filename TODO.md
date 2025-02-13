@@ -73,3 +73,8 @@
     2. docker compose up
 
     docker compose up --build
+
+
+9. Горутины, что это, GMP, сколько весит от и до
+10. Методы синхронизации https://medium.com/german-gorelkin/synchronization-primitives-go-8857747d9660
+11. interface, solid, опп в golang
