@@ -1,10 +1,9 @@
-version: '3.8'
+
 
 services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     depends_on:
@@ -16,7 +15,7 @@ services:
 
   postgres:
     image: postgres:14.10-alpine
-    container_name: postgres_db
+    container_name: postgres
     ports:
     - "5432:5432"
     environment:
@@ -33,4 +32,4 @@ services:
         retries: 5
 
 volumes:
-  pgdata: {}
+  pgdata: 
