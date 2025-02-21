@@ -2,6 +2,7 @@ package main
 
 import (
 	"apigateway/internal/handlers"
+	"apigateway/internal/repository"
 	"apigateway/internal/storage"
 	"apigateway/internal/usecase"
 	"context"
@@ -30,7 +31,8 @@ func main() {
 		}
 	}()
 
-	guestUsecase := usecase.NewGuestUsecase(store, logger)
+	guestRepo := repository.NewGuestRepo(store, logger)
+	guestUsecase := usecase.NewGuestUsecase(guestRepo, logger)
 	handlers := handlers.NewHandlers(guestUsecase, logger)
 
 	router := gin.Default()

@@ -9,7 +9,6 @@ import (
 	"apigateway/internal/usecase"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 )
 
 
@@ -23,7 +22,8 @@ func NewHandlers(guestUsecase *usecase.GuestUsecase, logger *slog.Logger) *Handl
 }
 
 func (h *Handlers) FetchAllGuests(c *gin.Context) {
-	guests, err := h.guestUsecase.FetchAllGuests()
+	ctx := c.Request.Context()
+	guests, err := h.guestUsecase.FetchAllGuests(ctx)
 	if err != nil {
 		h.logger.Error("Failed to fetch guests", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch guests"})
@@ -34,6 +34,7 @@ func (h *Handlers) FetchAllGuests(c *gin.Context) {
 }
 
 func (h *Handlers) CreateGuest(c *gin.Context) {
+	ctx := c.Request.Context()
 	var guest models.Guest
 	if err := c.BindJSON(&guest); err != nil {
 		h.logger.Warn("Invalid input received", "error", err)
@@ -41,7 +42,7 @@ func (h *Handlers) CreateGuest(c *gin.Context) {
 		return
 	}
 	
-	id, err := h.guestUsecase.CreateGuest(guest)
+	id, err := h.guestUsecase.CreateGuest(ctx, guest)
 	if err != nil {
 		h.logger.Error("Failed to create guest", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create guest"})
@@ -52,8 +53,9 @@ func (h *Handlers) CreateGuest(c *gin.Context) {
 }
 
 func (h *Handlers) DeleteGuest(c *gin.Context) {
+	ctx := c.Request.Context()
 	id := c.Param("id")
-	err := h.guestUsecase.DeleteGuest(id)
+	err := h.guestUsecase.DeleteGuest(ctx, id)
 	if err != nil {
 		h.logger.Error("Failed to delete guest", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete guest"})
@@ -64,6 +66,7 @@ func (h *Handlers) DeleteGuest(c *gin.Context) {
 }
 
 func (h *Handlers) UpdateGuest(c *gin.Context) {
+	ctx := c.Request.Context()
 	id := c.Param("id")
 	var guest models.Guest
 	if err := c.BindJSON(&guest); err != nil {
@@ -71,7 +74,7 @@ func (h *Handlers) UpdateGuest(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
         return
 	}
-	err := h.guestUsecase.UpdateGuest(id, guest)
+	err := h.guestUsecase.UpdateGuest(ctx, id, guest)
 	if err != nil {
 		h.logger.Error("Failed to update guest", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update guest"})
@@ -82,10 +85,11 @@ func (h *Handlers) UpdateGuest(c *gin.Context) {
 }
 
 func (h *Handlers) GetGuestByID(c *gin.Context) {
+	ctx := c.Request.Context()
 	id := c.Param("id")
-	guest, err := h.guestUsecase.GetGuestByID(id)
+	guest, err := h.guestUsecase.GetGuestByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, usecase.ErrNoData) {
 			h.logger.Warn("Guest not found", "id", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": "guest not found"})
             return
