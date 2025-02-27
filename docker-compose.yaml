@@ -9,8 +9,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable"
+    env_file:
+      - .env
     restart: always
 
   postgres:

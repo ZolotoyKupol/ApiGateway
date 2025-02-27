@@ -4,90 +4,72 @@ import (
 	"apigateway/internal/models"
 	"apigateway/internal/storage"
 	"context"
-	"errors"
+	"github.com/pkg/errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 )
 
-
 type RoomRepo struct {
-	store *storage.Storage
+	store  *storage.Storage
 	logger *slog.Logger
 }
 
-func NewRoomRepo(store *storage.Storage, logger *slog.Logger) *RoomRepo{
+func NewRoomRepo(store *storage.Storage, logger *slog.Logger) RoomRepoInterface {
 	return &RoomRepo{store: store, logger: logger}
 }
 
-func (r *RoomRepo) GetRoomsRepo(ctx context.Context) ([]models.Room, error) {
-	rows, err := r.store.Query("SELECT id, number, floor, room_size, status, occupied_by, check_in, check_out FROM rooms")
+func (r *RoomRepo) GetRoomsRepo(ctx context.Context) ([]models.RoomDB, error) {
+	var rooms []models.RoomDB
+	err := r.store.DB().WithContext(ctx).Find(&rooms).Error
 	if err != nil {
-		r.logger.Error("failed to fetch all rooms", "error", err)
-        return nil, err
+		r.logger.Error("failed to fetch rooms", "error", err)
+		return nil, errors.Wrap(err, "failed to fetch rooms")
 	}
-	defer rows.Close()
-
-	var rooms []models.Room
-	for rows.Next() {
-		var room models.Room
-		err := rows.Scan(&room.ID, &room.Number, &room.Floor, &room.RoomSize, &room.Status, &room.OccupiedBy, &room.CheckIn, &room.CheckOut)
-		if err != nil {
-			r.logger.Error("failed to scan room", "error", err)
-			return nil, err
-		}
-		rooms = append(rooms, room)
-	}
-	r.logger.Info("all rooms retrieved successfully", "count", len(rooms))
+	r.logger.Info("successfully fetched rooms", "count", len(rooms))
 	return rooms, nil
 }
 
-func (r *RoomRepo) CreateRoomRepo(ctx context.Context, room models.Room) (string, error) {
-	query := `INSERT INTO rooms (id, number, floor, room_size, status, occupied_by, check_in, check_out) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
-	var id string
-	err := r.store.Conn().QueryRow(ctx, query, room.ID, room.Number, room.Floor, room.RoomSize, room.Status, room.OccupiedBy, room.CheckIn, room.CheckOut,).Scan(&id)
+func (r *RoomRepo) CreateRoomRepo(ctx context.Context, room models.RoomDB) (string, error) {
+	err := r.store.DB().WithContext(ctx).Create(&room).Error
 	if err != nil {
-		r.logger.Error("error creating room", "error", err)
-		return "", err
+		r.logger.Error("failed to create room", "error", err)
+		return "", errors.Wrap(err, "failed to create room")
 	}
-	return id, nil
+	r.logger.Info("Successfully created room", "id", room.ID)
+	return room.ID, nil
 }
 
-func (r *RoomRepo) UpdateRoomRepo(ctx context.Context, id string, room models.Room) error {
-	query := `UPDATE rooms SET number = $1, floor = $2, room_size = $3, status = $4, occupied_by = $5, check_in = $6, check_out = $7 WHERE id = $8`
-	_, err := r.store.Conn().Exec(ctx, query, room.Number, room.Floor, room.RoomSize, room.Status, room.OccupiedBy, room.CheckIn, room.CheckOut, room.ID)
+func (r *RoomRepo) UpdateRoomRepo(ctx context.Context, id string, room models.RoomDB) error {
+	err := r.store.DB().WithContext(ctx).Model(&models.RoomDB{}).Where("id = ?", id).Updates(room).Error
 	if err != nil {
 		r.logger.Error("failed to update room", "error", err)
-		return err
+		return errors.Wrap(err, "failed to update room")
 	}
-	r.logger.Info("room update successfully", "room_id", room.ID)
+	r.logger.Info("room updated successfully", "id", id)
 	return nil
 }
-
 
 func (r *RoomRepo) DeleteRoomRepo(ctx context.Context, id string) error {
-	query := `DELETE FROM rooms WHERE id = $1`
-	_, err := r.store.Conn().Exec(ctx, query, id)
+	err := r.store.DB().WithContext(ctx).Where("id = ?", id).Delete(&models.RoomDB{}).Error
 	if err != nil {
 		r.logger.Error("failed to delete room", "error", err)
-		return err
+		return errors.Wrap(err, "failed to delete room")
 	}
-	r.logger.Info("room delete successfully", "id", id)
+	r.logger.Info("room deleted successfully", "id", id)
 	return nil
 }
 
-func (r *RoomRepo) GetRoomByIDRepo(ctx context.Context, id string) (*models.Room, error) {
-	query := `SELECT id, number, floor, room_size, status, occupied_by, check_in, check_out FROM rooms WHERE id = $1`
-	var room models.Room
-	err := r.store.Conn().QueryRow(ctx, query, id).Scan(&room.ID, &room.Number, &room.Floor, &room.RoomSize, &room.Status, &room.OccupiedBy, &room.CheckIn, &room.CheckOut,)
+func (r *RoomRepo) GetRoomByIDRepo(ctx context.Context, id string) (*models.RoomDB, error) {
+	var room models.RoomDB
+	err := r.store.DB().WithContext(ctx).Where("id = ?", id).First(&room).Error
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			r.logger.Warn("room not found", "id", id)
-			return nil, nil
+			return nil, errors.Wrap(err, "room not found")
 		}
-		r.logger.Error("failed to get room by ID", "error", err)
-		return nil, err
+		r.logger.Error("failed to fetch room", "error", err)
+		return nil, errors.Wrap(err, "failed to fetch room")
 	}
-	r.logger.Info("successfully fetched room", "id", id)
+	r.logger.Info("room fetched successfully", "id", id)
 	return &room, nil
 }

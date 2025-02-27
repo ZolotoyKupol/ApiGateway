@@ -12,16 +12,16 @@ import (
 )
 
 
-type Handlers struct {
-	guestUsecase *usecase.GuestUsecase
+type GuestHandlers struct {
+	guestUsecase usecase.GuestUsecaseInterface
 	logger *slog.Logger
 }
 
-func NewHandlers(guestUsecase *usecase.GuestUsecase, logger *slog.Logger) *Handlers {
-	return &Handlers{guestUsecase: guestUsecase, logger: logger}
+func NewHandlers(guestUsecase usecase.GuestUsecaseInterface, logger *slog.Logger) GuestProvider {
+	return &GuestHandlers{guestUsecase: guestUsecase, logger: logger}
 }
 
-func (h *Handlers) FetchAllGuests(c *gin.Context) {
+func (h *GuestHandlers) FetchAllGuests(c *gin.Context) {
 	ctx := c.Request.Context()
 	guests, err := h.guestUsecase.FetchAllGuests(ctx)
 	if err != nil {
@@ -33,9 +33,9 @@ func (h *Handlers) FetchAllGuests(c *gin.Context) {
 	c.JSON(http.StatusOK, guests)
 }
 
-func (h *Handlers) CreateGuest(c *gin.Context) {
+func (h *GuestHandlers) CreateGuest(c *gin.Context) {
 	ctx := c.Request.Context()
-	var guest models.Guest
+	var guest models.GuestDB
 	if err := c.BindJSON(&guest); err != nil {
 		h.logger.Warn("Invalid input received", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
@@ -52,7 +52,7 @@ func (h *Handlers) CreateGuest(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"id": id})
 }
 
-func (h *Handlers) DeleteGuest(c *gin.Context) {
+func (h *GuestHandlers) DeleteGuest(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	err := h.guestUsecase.DeleteGuest(ctx, id)
@@ -65,10 +65,10 @@ func (h *Handlers) DeleteGuest(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "guest deleted"})
 }
 
-func (h *Handlers) UpdateGuest(c *gin.Context) {
+func (h *GuestHandlers) UpdateGuest(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
-	var guest models.Guest
+	var guest models.GuestDB
 	if err := c.BindJSON(&guest); err != nil {
 		h.logger.Warn("Invalid input received", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
@@ -84,7 +84,7 @@ func (h *Handlers) UpdateGuest(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "guest updated"})
 }
 
-func (h *Handlers) GetGuestByID(c *gin.Context) {
+func (h *GuestHandlers) GetGuestByID(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := c.Param("id")
 	guest, err := h.guestUsecase.GetGuestByID(ctx, id)

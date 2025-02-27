@@ -1,35 +1,31 @@
 package storage
 
 import (
-	"context"
+	"apigateway/internal/models"
 	"fmt"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 type Storage struct {
-	conn *pgx.Conn
+	db *gorm.DB
 }
 
 func NewStorage(connString string) (*Storage, error) {
-	conn, err := pgx.Connect(context.Background(), connString)
+	db, err := gorm.Open(postgres.Open(connString), &gorm.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to db: %v", err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
-	return &Storage{conn: conn}, nil
+
+	err = db.AutoMigrate(&models.Guest{}, &models.Room{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to migrate db: %w", err)
+	}
+
+	return &Storage{db: db}, nil
 }
 
-func (s *Storage) Conn() *pgx.Conn {
-	return s.conn
+func (s *Storage) DB() *gorm.DB {
+	return s.db
 }
-
-
-func (s *Storage) Query(query string, args ...interface{}) (pgx.Rows, error) {
-	return s.conn.Query(context.Background(), query, args...)
-}
-
-func (s *Storage) Exec(query string, args ...interface{}) (pgconn.CommandTag, error) {
-	return s.conn.Exec(context.Background(), query, args...)
-}
-

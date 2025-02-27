@@ -18,63 +18,11 @@
 <!-- 6. переход с переменной на базу -->
 <!-- 7. добавить таблицу guest -->
 
-8. Добавить docker compose
-    1. Поставить docker hub, brew install ...
-    2. Добавить docker-compose.yaml
-    ```yaml
-    services:
-
-    api-gateway:
-    build: ./
-    ports:
-    - "8080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-    postgres:
-    image: postgres:14.10-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_HOST_AUTH_METHOD: trust
-    volumes:
-      - pgdata:/var/lib/postgresql/data  
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 10s
-      retries: 5
-    ```
-
-    Добавить ./Dockerfile
-    ```Dockerfile
-    FROM golang:1.23-alpine AS builder
-
-    WORKDIR /
-
-    COPY go.mod go.sum ./
-    RUN go mod download
-
-    COPY . .
-
-    RUN go build -o /app/api-gateway ./cmd/
-    RUN ls -l /app
-
-    FROM alpine:latest 
-
-    WORKDIR /app
-    COPY --from=builder /app/api-gateway .
-
-    ENTRYPOINT ["./api-gateway"]
-    ```
-
-    1. docker compose build
-    2. docker compose up
-
-    docker compose up --build
-
+<!-- 8. Добавить docker compose -->
 
 9. Горутины, что это, GMP, сколько весит от и до
 10. Методы синхронизации https://medium.com/german-gorelkin/synchronization-primitives-go-8857747d9660
 11. interface, solid, опп в golang
+12. stack и heap в golang
+13. Индексы, join, b-tree, когда индекс делает быстрее, а когда может медленее, оконные функции (over и тд), чек что такое explane/expane analise
+14. Приведение типов в golang
