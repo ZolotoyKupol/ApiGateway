@@ -4,31 +4,38 @@ import (
 	"apigateway/internal/models"
 	"apigateway/internal/repository"
 	"context"
-	"github.com/pkg/errors"
 	"log/slog"
+
+	"github.com/pkg/errors"
 )
 
-type RoomUsecase struct {
-	repo repository.RoomRepoInterface
+type RoomUC struct {
+	repo   repository.RoomRepoProvider
 	logger *slog.Logger
 }
 
-func NewRoomUsecase(repo repository.RoomRepoInterface, logger *slog.Logger) RoomUsecaseInteface{
-	return &RoomUsecase{repo: repo, logger: logger}
+func NewRoomUsecase(repo repository.RoomRepoProvider, logger *slog.Logger) *RoomUC {
+	return &RoomUC{repo: repo, logger: logger}
 }
 
-func (u *RoomUsecase) GetRooms(ctx context.Context) ([]models.RoomResponse, error) {
-	roomDB, err := u.repo.GetRoomsRepo(ctx)
+func (u *RoomUC) GetRooms(ctx context.Context) ([]models.RoomResponse, error) {
+	roomDB, err := u.repo.GetAllRooms(ctx)
 	if err != nil {
+		if errors.Is(err, ErrNoData) {
+			return nil, ErrNoData
+		}
 		u.logger.Error(err.Error())
 		return nil, errors.Wrap(err, "error fetching all rooms")
 	}
 	return models.ConvertToRoomResponseList(roomDB), nil
 }
 
-func (u *RoomUsecase) GetRoomByID(ctx context.Context, id string) (*models.RoomResponse, error) {
-	roomDB, err := u.repo.GetRoomByIDRepo(ctx, id)
+func (u *RoomUC) GetRoomByID(ctx context.Context, id int) (*models.RoomResponse, error) {
+	roomDB, err := u.repo.GetRoomByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, ErrNoData) {
+			return nil, ErrNoData
+		}
 		u.logger.Error(err.Error())
 		return nil, errors.Wrap(err, "error fetching room")
 	}
@@ -36,14 +43,14 @@ func (u *RoomUsecase) GetRoomByID(ctx context.Context, id string) (*models.RoomR
 	return &roomResponse, nil
 }
 
-func (u *RoomUsecase) CreateRoom(ctx context.Context, room models.RoomDB) (string, error) {
-	return u.repo.CreateRoomRepo(ctx, room)
+func (u *RoomUC) CreateRoom(ctx context.Context, room models.RoomDB) (int, error) {
+	return u.repo.CreateRoom(ctx, room)
 }
 
-func (u *RoomUsecase) DeleteRoom(ctx context.Context, id string) error {
-	return u.repo.DeleteRoomRepo(ctx, id)
+func (u *RoomUC) DeleteRoom(ctx context.Context, id int) error {
+	return u.repo.DeleteRoom(ctx, id)
 }
 
-func (u *RoomUsecase) UpdateRoom(ctx context.Context, id string, room models.RoomDB) error {
-	return u.repo.UpdateRoomRepo(ctx, id, room)
+func (u *RoomUC) UpdateRoom(ctx context.Context, id int, room models.RoomDB) error {
+	return u.repo.UpdateRoom(ctx, id, room)
 }

@@ -3,14 +3,14 @@ package models
 import "time"
 
 type GuestResponse struct {
-	ID        string `json:"id"`
+	ID        int 	 `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	RoomID    int    `json:"room_id"`
 }
 
 type RoomResponse struct {
-	ID         string    `json:"id"`
+	ID         int    	 `json:"id"`
 	Number     string    `json:"number"`
 	Floor      string    `json:"floor"`
 	RoomSize   float64   `json:"room_size"`
@@ -20,8 +20,7 @@ type RoomResponse struct {
 	CheckOut   time.Time `json:"check_out"`
 }
 
-
-func (g GuestDB) ConvertToGuestResponse() GuestResponse {
+func (g *GuestDB) ConvertToGuestResponse() GuestResponse {
 	return GuestResponse{
 		ID:        g.ID,
 		FirstName: g.FirstName,
@@ -30,7 +29,7 @@ func (g GuestDB) ConvertToGuestResponse() GuestResponse {
 	}
 }
 
-func (r RoomDB) ConvertToRoomResponse() RoomResponse {
+func (r *RoomDB) ConvertToRoomResponse() RoomResponse {
 	return RoomResponse{
 		ID:         r.ID,
 		Number:     r.Number,
@@ -44,17 +43,17 @@ func (r RoomDB) ConvertToRoomResponse() RoomResponse {
 }
 
 func ConvertToGuestResponseList(guests []GuestDB) []GuestResponse {
-	var guestResponses []GuestResponse
-	for _, guest := range guests {
-		guestResponses = append(guestResponses, guest.ConvertToGuestResponse())
+	guestResponses := make([]GuestResponse, len(guests))
+	for i, guest := range guests {
+		guestResponses[i] = guest.ConvertToGuestResponse()
 	}
 	return guestResponses
 }
 
 func ConvertToRoomResponseList(rooms []RoomDB) []RoomResponse {
-	var roomResponses []RoomResponse
-	for _, room := range rooms {
-		roomResponses = append(roomResponses, room.ConvertToRoomResponse())
+	roomResponses := make([]RoomResponse, len(rooms))
+	for i, room := range rooms {
+		roomResponses[i] = room.ConvertToRoomResponse()
 	}
 	return roomResponses
 }

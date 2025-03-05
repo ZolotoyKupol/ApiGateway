@@ -2,12 +2,13 @@ FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
+COPY migrations/ ./migrations/
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
 
-RUN cd cmd && go build -o ../api-gateway
+RUN go build -o /app/api-gateway ./cmd
 RUN ls -l 
 
 FROM alpine:latest

@@ -8,60 +8,59 @@ import (
 
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
-
 )
 
 type GuestRepo struct {
-	store *storage.Storage
+	store  *storage.Storage
 	logger *slog.Logger
 }
 
-func NewGuestRepo(store *storage.Storage, logger *slog.Logger) GuestRepoInterface {
+func NewGuestRepo(store *storage.Storage, logger *slog.Logger) *GuestRepo {
 	return &GuestRepo{store: store, logger: logger}
 }
 
-func (g *GuestRepo) GetGuestsRepo(ctx context.Context) ([]models.GuestDB, error) {
+func (g *GuestRepo) GetAllGuests(ctx context.Context) ([]models.GuestDB, error) {
 	var guests []models.GuestDB
 	err := g.store.DB().WithContext(ctx).Find(&guests).Error
 	if err != nil {
 		g.logger.Error("failed to fetch guests", "error", err)
 		return nil, errors.Wrap(err, "failed to fetch guests")
 	}
-	g.logger.Info("successfully fetched guests", "count", len(guests))
+	g.logger.Debug("successfully fetched guests", "count", len(guests))
 	return guests, nil
 }
 
-func (g *GuestRepo) CreateGuestRepo(ctx context.Context, guest models.GuestDB) (string, error) {
+func (g *GuestRepo) CreateGuest(ctx context.Context, guest models.GuestDB) (int, error) {
 	err := g.store.DB().WithContext(ctx).Create(&guest).Error
 	if err != nil {
 		g.logger.Error("failed to create guest", "error", err)
-		return "", errors.Wrap(err, "failed to create guest")
+		return 0, errors.Wrap(err, "failed to create guest")
 	}
-	g.logger.Info("Successfully created guest", "id", guest.ID)
+	g.logger.Debug("Successfully created guest", "id", guest.ID)
 	return guest.ID, nil
 }
 
-func (g *GuestRepo) DeleteGuestRepo(ctx context.Context, id string) (error) {
+func (g *GuestRepo) DeleteGuest(ctx context.Context, id string) error {
 	err := g.store.DB().WithContext(ctx).Where("id = ?", id).Delete(&models.GuestDB{}).Error
 	if err != nil {
 		g.logger.Error("failed to delete guest", "error", err)
 		return errors.Wrap(err, "failed to delete guest")
 	}
-	g.logger.Info("successfully deleted guest", "id", id)
+	g.logger.Debug("successfully deleted guest", "id", id)
 	return nil
 }
 
-func (g *GuestRepo) UpdateGuestRepo(ctx context.Context, id string, guest models.GuestDB) error {
+func (g *GuestRepo) UpdateGuest(ctx context.Context, id string, guest models.GuestDB) error {
 	err := g.store.DB().WithContext(ctx).Model(&models.GuestDB{}).Where("id = ?", id).Updates(guest).Error
 	if err != nil {
 		g.logger.Error("failed to update guest", "error", err)
 		return errors.Wrap(err, "failed to update guest")
 	}
-	g.logger.Info("guest updated successfully", "id", id)
+	g.logger.Debug("guest updated successfully", "id", id)
 	return nil
 }
 
-func (g *GuestRepo) GetGuestByIDRepo(ctx context.Context, id string) (*models.GuestDB, error) {
+func (g *GuestRepo) GetGuestByID(ctx context.Context, id string) (*models.GuestDB, error) {
 	var guest models.GuestDB
 	err := g.store.DB().WithContext(ctx).First(&guest, "id = ?", id).Error
 	if err != nil {
@@ -70,9 +69,8 @@ func (g *GuestRepo) GetGuestByIDRepo(ctx context.Context, id string) (*models.Gu
 			return nil, errors.Wrap(err, "guest not found")
 		}
 		g.logger.Error("error fetching guest by ID", "error", err)
-        return nil, errors.Wrap(err, "error fetching guest by ID")
+		return nil, errors.Wrap(err, "error fetching guest by ID")
 	}
-	g.logger.Info("successfully fetched guest", "id", id)
+	g.logger.Debug("successfully fetched guest", "id", id)
 	return &guest, nil
 }
-

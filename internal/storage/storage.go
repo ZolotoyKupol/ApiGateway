@@ -1,9 +1,7 @@
 package storage
 
 import (
-	"apigateway/internal/models"
-	"fmt"
-
+	"github.com/pkg/errors"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -15,12 +13,7 @@ type Storage struct {
 func NewStorage(connString string) (*Storage, error) {
 	db, err := gorm.Open(postgres.Open(connString), &gorm.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
-
-	err = db.AutoMigrate(&models.Guest{}, &models.Room{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to migrate db: %w", err)
+		return nil, errors.Wrap(err, "failed to connect to database")
 	}
 
 	return &Storage{db: db}, nil
@@ -28,4 +21,12 @@ func NewStorage(connString string) (*Storage, error) {
 
 func (s *Storage) DB() *gorm.DB {
 	return s.db
+}
+
+func (s *Storage) Close() error {
+	db, err := s.db.DB()
+	if err != nil {
+		return errors.Wrap(err, "failed to get database connection")
+	}
+	return db.Close()
 }

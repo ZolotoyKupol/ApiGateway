@@ -5,20 +5,18 @@ import (
 	"context"
 )
 
-
-type GuestRepoInterface interface {
-	GetGuestsRepo(ctx context.Context) ([]models.GuestDB, error)
-	CreateGuestRepo(ctx context.Context, guest models.GuestDB) (string, error)
-	DeleteGuestRepo(ctx context.Context, id string) (error)
-	UpdateGuestRepo(ctx context.Context, id string, guest models.GuestDB) error
-	GetGuestByIDRepo(ctx context.Context, id string) (*models.GuestDB, error)
+type GuestRepoProvider interface {
+	GetAllGuests(ctx context.Context) ([]models.GuestDB, error)
+	CreateGuest(ctx context.Context, guest models.GuestDB) (int, error)
+	DeleteGuest(ctx context.Context, id string) error
+	UpdateGuest(ctx context.Context, id string, guest models.GuestDB) error
+	GetGuestByID(ctx context.Context, id string) (*models.GuestDB, error)
 }
 
-
-type RoomRepoInterface interface {
-	CreateRoomRepo(ctx context.Context, room models.RoomDB) (string, error)
-	DeleteRoomRepo(ctx context.Context, id string) error
-	GetRoomByIDRepo(ctx context.Context, id string) (*models.RoomDB, error)
-	GetRoomsRepo(ctx context.Context) ([]models.RoomDB, error)
-	UpdateRoomRepo(ctx context.Context, id string, room models.RoomDB) error
+type RoomRepoProvider interface {
+	CreateRoom(ctx context.Context, room models.RoomDB) (int, error)
+	DeleteRoom(ctx context.Context, id int) error
+	GetRoomByID(ctx context.Context, id int) (*models.RoomDB, error)
+	GetAllRooms(ctx context.Context) ([]models.RoomDB, error)
+	UpdateRoom(ctx context.Context, id int, room models.RoomDB) error
 }

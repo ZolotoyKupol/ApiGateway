@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS rooms (
-    id TEXT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     number TEXT NOT NULL,
     floor TEXT NOT NULL,
     room_size FLOAT NOT NULL,
