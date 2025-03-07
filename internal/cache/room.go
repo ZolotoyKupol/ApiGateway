@@ -4,11 +4,13 @@ import (
 	"apigateway/internal/models"
 	"apigateway/internal/repository"
 	"context"
+	"sync"
 )
 
 type CachedRoom struct {
 	roomRepo *repository.RoomRepo
 	rooms    map[int]models.RoomDB
+	mu 	 sync.RWMutex
 }
 
 func NewCachedRoom(roomRepo *repository.RoomRepo) *CachedRoom {
@@ -17,6 +19,20 @@ func NewCachedRoom(roomRepo *repository.RoomRepo) *CachedRoom {
 
 
 func (c *CachedRoom) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
+	c.mu.RLock()
+	if len(c.rooms) > 0 {
+		defer c.mu.RUnlock()
+		var rooms []models.RoomDB
+		for _, room := range c.rooms {
+			rooms = append(rooms, room)
+		}
+		return rooms, nil
+	}
+	c.mu.RUnlock()
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if len(c.rooms) == 0 {
 		rooms, err := c.roomRepo.GetAllRooms(ctx)
 		if err != nil {
@@ -26,6 +42,7 @@ func (c *CachedRoom) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
 			c.rooms[room.ID] = room
 		}
 	}
+	
 	var rooms []models.RoomDB
 	for _, room := range c.rooms {
 		rooms = append(rooms, room)
@@ -34,9 +51,16 @@ func (c *CachedRoom) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
 }
 
 func (c *CachedRoom) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, error) {
+	c.mu.RLock()
 	if room, ok := c.rooms[id]; ok {
+		defer c.mu.RUnlock()
 		return &room, nil
 	}
+	c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+
 	room, err := c.roomRepo.GetRoomByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -50,7 +74,12 @@ func (c *CachedRoom) CreateRoom(ctx context.Context, room models.RoomDB) (int, e
 	if err != nil {
 		return 0, err
 	}
+
 	room.ID = id
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	c.rooms[id] = room
 	return id, nil
 }
@@ -60,6 +89,9 @@ func (c *CachedRoom) DeleteRoom(ctx context.Context, id int) error {
 	if err != nil {
 		return err
 	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	delete(c.rooms, id)
 	return nil
 }
@@ -69,6 +101,9 @@ func (c *CachedRoom) UpdateRoom(ctx context.Context, id int, room models.RoomDB)
 	if err != nil {
 		return err
 	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	c.rooms[id] = room
 	return nil
 }
