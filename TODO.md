@@ -26,3 +26,10 @@
 12. stack и heap в golang
 13. Индексы, join, b-tree, когда индекс делает быстрее, а когда может медленее, оконные функции (over и тд), чек что такое explane/expane analise
 14. Приведение типов в golang
+ // рефлексия почитать это плохо работать через нее, фони в мэйк файле убрать, очистить миграции клин убрать
+ // так же нормально расставить миграции по уровням DEBUG INFO
+ // так же нужно узнать про middleware и для чего нужны брокеры типо kafka
+ // не работает метрика http_responses_total
+15. race condition, data race, race detection
+16. DRY & KISS, CAP теорема, ASID
+17. kafka vs rebbitMQ

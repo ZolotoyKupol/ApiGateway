@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"apigateway/internal/apperr"
 	"apigateway/internal/models"
 	"apigateway/internal/usecase"
 	"errors"
@@ -23,9 +24,7 @@ func NewRoomHandler(usecase usecase.RoomUCProvider, logger *slog.Logger) *RoomHa
 func (h *RoomHandler) GetAllRooms(c *gin.Context) {
 	rooms, err := h.usecase.GetRooms(c)
 	if err != nil {
-		if errors.Is(err, usecase.ErrNoData) {
-			h.logger.Debug("no rooms found")
-			h.logger.Warn("no rooms found")
+		if errors.Is(err, apperr.ErrNoData) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "no rooms found"})
 			return
 		}
@@ -101,7 +100,7 @@ func (h *RoomHandler) GetRoomByID(c *gin.Context) {
 
 	room, err := h.usecase.GetRoomByID(c, id)
 	if err != nil {
-		if errors.Is(err, usecase.ErrNoData) {
+		if errors.Is(err, apperr.ErrNoData) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
 			return
 		}

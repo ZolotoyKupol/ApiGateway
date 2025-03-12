@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"apigateway/internal/apperr"
 	"apigateway/internal/models"
 	"apigateway/internal/repository"
 	"context"
@@ -10,19 +11,19 @@ import (
 )
 
 type RoomUC struct {
-	repo   repository.RoomRepoProvider
+	repo   repository.RoomProvider
 	logger *slog.Logger
 }
 
-func NewRoomUsecase(repo repository.RoomRepoProvider, logger *slog.Logger) *RoomUC {
+func NewRoomUsecase(repo repository.RoomProvider, logger *slog.Logger) *RoomUC {
 	return &RoomUC{repo: repo, logger: logger}
 }
 
 func (u *RoomUC) GetRooms(ctx context.Context) ([]models.RoomResponse, error) {
 	roomDB, err := u.repo.GetAllRooms(ctx)
 	if err != nil {
-		if errors.Is(err, ErrNoData) {
-			return nil, ErrNoData
+		if errors.Is(err, apperr.ErrNoData) {
+			return nil, apperr.ErrNoData
 		}
 		u.logger.Error(err.Error())
 		return nil, errors.Wrap(err, "error fetching all rooms")
@@ -33,8 +34,8 @@ func (u *RoomUC) GetRooms(ctx context.Context) ([]models.RoomResponse, error) {
 func (u *RoomUC) GetRoomByID(ctx context.Context, id int) (*models.RoomResponse, error) {
 	roomDB, err := u.repo.GetRoomByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, ErrNoData) {
-			return nil, ErrNoData
+		if errors.Is(err, apperr.ErrNoData) {
+			return nil, apperr.ErrNoData
 		}
 		u.logger.Error(err.Error())
 		return nil, errors.Wrap(err, "error fetching room")

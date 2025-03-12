@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"apigateway/internal/apperr"
 	"apigateway/internal/models"
 	"apigateway/internal/repository"
 	"context"
@@ -12,21 +13,20 @@ import (
 var ErrNoData = errors.New("no data")
 
 type GuestUC struct {
-	repo   repository.GuestRepoProvider
+	repo   repository.GuestProvider
 	logger *slog.Logger
 }
 
-func NewGuestUsecase(repo repository.GuestRepoProvider, logger *slog.Logger) *GuestUC {
+func NewGuestUsecase(repo repository.GuestProvider, logger *slog.Logger) *GuestUC {
 	return &GuestUC{repo: repo, logger: logger}
 }
 
 func (g *GuestUC) GetGuests(ctx context.Context) ([]models.GuestResponse, error) {
 	guestDB, err := g.repo.GetAllGuests(ctx)
 	if err != nil {
-		if errors.Is(err, ErrNoData) {
-			return nil, ErrNoData
+		if errors.Is(err, apperr.ErrNoData) {
+			return nil, apperr.ErrNoData
 		}
-		g.logger.Error(err.Error())
 		return nil, errors.Wrap(err, "error fetching all guests")
 	}
 	return models.ConvertToGuestResponseList(guestDB), nil
@@ -47,10 +47,9 @@ func (g *GuestUC) UpdateGuest(ctx context.Context, id string, guest models.Guest
 func (g *GuestUC) GetGuestByID(ctx context.Context, id string) (*models.GuestResponse, error) {
 	guestDB, err := g.repo.GetGuestByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, ErrNoData) {
-			return nil, ErrNoData
+		if errors.Is(err, apperr.ErrNoData) {
+			return nil, apperr.ErrNoData
 		}
-		g.logger.Error(err.Error())
 		return nil, errors.Wrap(err, "error fetching guest")
 	}
 	guestResponse := guestDB.ConvertToGuestResponse()

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"apigateway/internal/apperr"
 	"apigateway/internal/models"
 	"apigateway/internal/storage"
 	"context"
@@ -23,8 +24,10 @@ func (g *GuestRepo) GetAllGuests(ctx context.Context) ([]models.GuestDB, error) 
 	var guests []models.GuestDB
 	err := g.store.DB().WithContext(ctx).Find(&guests).Error
 	if err != nil {
-		g.logger.Error("failed to fetch guests", "error", err)
 		return nil, errors.Wrap(err, "failed to fetch guests")
+	}
+	if len(guests) == 0 {
+		return nil, apperr.ErrNoData
 	}
 	g.logger.Debug("successfully fetched guests", "count", len(guests))
 	return guests, nil
@@ -65,8 +68,7 @@ func (g *GuestRepo) GetGuestByID(ctx context.Context, id string) (*models.GuestD
 	err := g.store.DB().WithContext(ctx).First(&guest, "id = ?", id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			g.logger.Warn("guest not found", "id", id)
-			return nil, errors.Wrap(err, "guest not found")
+			return nil, apperr.ErrNoData
 		}
 		g.logger.Error("error fetching guest by ID", "error", err)
 		return nil, errors.Wrap(err, "error fetching guest by ID")

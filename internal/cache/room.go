@@ -1,72 +1,54 @@
 package cache
 
 import (
+	"apigateway/internal/apperr"
 	"apigateway/internal/models"
 	"apigateway/internal/repository"
+	"apigateway/internal/metrics"
 	"context"
 	"sync"
 )
 
 type CachedRoom struct {
-	roomRepo *repository.RoomRepo
-	rooms    map[int]models.RoomDB
+	roomRepo repository.RoomProvider
 	mu 	 sync.RWMutex
+	rooms    map[int]models.RoomDB
+	
 }
 
-func NewCachedRoom(roomRepo *repository.RoomRepo) *CachedRoom {
+func NewCachedRoom(roomRepo repository.RoomProvider) *CachedRoom {
 	return &CachedRoom{roomRepo: roomRepo, rooms: make(map[int]models.RoomDB)}
 }
 
 
 func (c *CachedRoom) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
-	c.mu.RLock()
-	if len(c.rooms) > 0 {
-		defer c.mu.RUnlock()
-		var rooms []models.RoomDB
-		for _, room := range c.rooms {
-			rooms = append(rooms, room)
-		}
-		return rooms, nil
-	}
-	c.mu.RUnlock()
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+	c.rooms = make(map[int]models.RoomDB)
 	if len(c.rooms) == 0 {
 		rooms, err := c.roomRepo.GetAllRooms(ctx)
 		if err != nil {
 			return nil, err
 		}
-		for _, room := range rooms {
-			c.rooms[room.ID] = room
+		if err := c.SetAll(ctx, rooms); err != nil {
+			return nil, err
 		}
 	}
-	
-	var rooms []models.RoomDB
-	for _, room := range c.rooms {
-		rooms = append(rooms, room)
-	}
-	return rooms, nil
+	metrics.UpdateCacheSizeMetric(len(c.rooms))
+	return c.convertMapToSlice(), nil
 }
 
 func (c *CachedRoom) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, error) {
-	c.mu.RLock()
-	if room, ok := c.rooms[id]; ok {
-		defer c.mu.RUnlock()
-		return &room, nil
+	room, err := c.Get(ctx, id)
+	if err == nil {
+		return room, nil
 	}
-	c.mu.RUnlock()
-	c.mu.Lock()
-	defer c.mu.Unlock()
 
-
-	room, err := c.roomRepo.GetRoomByID(ctx, id)
+	dbRoom, err := c.roomRepo.GetRoomByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	c.rooms[room.ID] = *room
-	return room, nil
+
+	c.Set(ctx, *dbRoom)
+	return dbRoom, nil
 }
 
 func (c *CachedRoom) CreateRoom(ctx context.Context, room models.RoomDB) (int, error) {
@@ -108,4 +90,38 @@ func (c *CachedRoom) UpdateRoom(ctx context.Context, id int, room models.RoomDB)
 	return nil
 }
 
+func (c *CachedRoom) Get(ctx context.Context, id int) (*models.RoomDB, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
+	if room, ok := c.rooms[id]; ok {
+		return &room, nil
+	}
+	return nil, apperr.ErrNoDataCache
+}
+
+func (c *CachedRoom) Set(ctx context.Context, room models.RoomDB) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.rooms[room.ID] = room
+	return nil
+}
+
+func (c *CachedRoom) convertMapToSlice() []models.RoomDB {
+	rooms := make([]models.RoomDB, 0, len(c.rooms))
+	for _, room := range c.rooms {
+		rooms = append(rooms, room)
+	}
+	return rooms
+}
+
+func (c *CachedRoom) SetAll(ctx context.Context, rooms []models.RoomDB) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for _, room := range rooms {
+		c.rooms[room.ID] = room
+	}
+	return nil
+}

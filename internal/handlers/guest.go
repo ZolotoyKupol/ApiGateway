@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"apigateway/internal/apperr"
 	"apigateway/internal/models"
 	"apigateway/internal/usecase"
 
@@ -23,8 +24,7 @@ func NewHandlers(guestUsecase usecase.GuestUCProvider, logger *slog.Logger) *Gue
 func (h *GuestHandlers) GetAllGuests(c *gin.Context) {
 	guests, err := h.guestUsecase.GetGuests(c)
 	if err != nil {
-		if errors.Is(err, usecase.ErrNoData) {
-			h.logger.Warn("no guests found")
+		if errors.Is(err, apperr.ErrNoData) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "no guests found"})
 			return
 		}
@@ -91,7 +91,7 @@ func (h *GuestHandlers) GetGuestByID(c *gin.Context) {
 	id := c.Param("id")
 	guest, err := h.guestUsecase.GetGuestByID(c, id)
 	if err != nil {
-		if errors.Is(err, usecase.ErrNoData) {
+		if errors.Is(err, apperr.ErrNoData) {
 			h.logger.Warn("guest not found", "id", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": "guest not found"})
 			return

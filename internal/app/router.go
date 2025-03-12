@@ -6,8 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(guestHandler handlers.GuestProvider, roomHandler handlers.RoomProvider) *gin.Engine {
+func SetupRouter() *gin.Engine {
 	router := gin.Default()
+	return router
+}
+
+func RegisterRoutes(router *gin.Engine, guestHandler handlers.GuestProvider, roomHandler handlers.RoomProvider) {
 
 	guestGroup := router.Group("/guests")
 	guestGroup.GET("", guestHandler.GetAllGuests)
@@ -23,5 +27,4 @@ func SetupRouter(guestHandler handlers.GuestProvider, roomHandler handlers.RoomP
 	roomGroup.PUT("/:id", roomHandler.UpdateRoom)
 	roomGroup.DELETE("/:id", roomHandler.DeleteRoom)
 
-	return router
 }

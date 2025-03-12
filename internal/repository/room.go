@@ -1,14 +1,15 @@
 package repository
 
 import (
+	"apigateway/internal/apperr"
 	"apigateway/internal/models"
 	"apigateway/internal/storage"
 	"context"
 	"log/slog"
 
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 
-	"github.com/jackc/pgx/v5"
 )
 
 type RoomRepo struct {
@@ -65,8 +66,9 @@ func (r *RoomRepo) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, err
 	var room models.RoomDB
 	err := r.store.DB().WithContext(ctx).Where("id = ?", id).First(&room).Error
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errors.Wrap(err, "room not found")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			r.logger.Warn("room not found", "id", id)
+			return nil, apperr.ErrNoData
 		}
 		r.logger.Error("failed to fetch room", "error", err)
 		return nil, errors.Wrap(err, "failed to fetch room")
