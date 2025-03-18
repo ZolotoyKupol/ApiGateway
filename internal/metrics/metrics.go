@@ -69,7 +69,6 @@ func PrometheusMiddleware() gin.HandlerFunc {
 		HttpStatusMetric.WithLabelValues(http.StatusText(statusCode), method).Inc()
 		slog.Debug("HTTP request processed", "status", statusCode, "method", method)
 	}
-	
 }
 
 func Init(port string) {

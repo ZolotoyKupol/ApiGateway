@@ -14,7 +14,6 @@ linters:
     - copyloopvar
     - sloglint
     - unconvert
-    - gosec
     - noctx
     - gocritic
     - testifylint

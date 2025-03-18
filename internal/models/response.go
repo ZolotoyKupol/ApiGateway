@@ -3,14 +3,14 @@ package models
 import "time"
 
 type GuestResponse struct {
-	ID        int 	 `json:"id"`
+	ID        int    `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	RoomID    int    `json:"room_id"`
 }
 
 type RoomResponse struct {
-	ID         int    	 `json:"id"`
+	ID         int       `json:"id"`
 	Number     string    `json:"number"`
 	Floor      string    `json:"floor"`
 	RoomSize   float64   `json:"room_size"`

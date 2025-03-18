@@ -1,12 +1,14 @@
 package cache
 
 import (
+	"apigateway/internal/metrics"
 	"apigateway/internal/models"
 	"apigateway/internal/repository"
 	"context"
-	"github.com/pkg/errors"
+	"log/slog"
 	"sync"
-	"apigateway/internal/metrics"
+
+	"github.com/pkg/errors"
 )
 
 type CachedRoom struct {
@@ -46,7 +48,9 @@ func (c *CachedRoom) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, e
 		return nil, errors.Wrap(err, "not found room in cache")
 	}
 
-	c.Set(ctx, *dbRoom)
+	if err := c.Set(ctx, *dbRoom); err != nil {
+		slog.Debug("failed to set room in cache", "err", err)
+	}
 	return dbRoom, nil
 }
 

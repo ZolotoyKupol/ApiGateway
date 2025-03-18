@@ -298,7 +298,7 @@ func TestCreateRoom_WithMock(t *testing.T) {
     cache := NewCachedRoom(mockRepo)
     id, err := cache.CreateRoom(context.Background(), models.RoomDB{Number: "201"})
 
-    assert.NoError(t, err)
+    require.NoError(t, err)
     assert.Equal(t, 1, id)
 }
 
@@ -316,7 +316,7 @@ func TestGetRoomByID_WithMock(t *testing.T) {
 
     room, err := cache.GetRoomByID(context.Background(), 1)
 
-    assert.NoError(t, err)
+    require.NoError(t, err)
     assert.NotNil(t, room)
     assert.Equal(t, "101", room.Number)
 }
@@ -333,7 +333,9 @@ func TestUpdateRoom_WithMock(t *testing.T) {
 
     cache := NewCachedRoom(mockRepo)
 
-    cache.Set(context.Background(), models.RoomDB{ID: 1, Number: "101"})
+    if err := cache.Set(context.Background(), models.RoomDB{ID: 1, Number: "101"}); err != nil {
+        t.Fatal("failed to set room in cache", err)
+    }
 
     err := cache.UpdateRoom(context.Background(), 1, models.RoomDB{ID: 1, Number: "UpdatedRoom"})
 
@@ -364,7 +366,7 @@ func TestGetAllRooms_WithMock(t *testing.T) {
 
     rooms, err := cache.GetAllRooms(context.Background())
 
-    assert.NoError(t, err)
+    require.NoError(t, err)
     assert.Len(t, rooms, 2)
     assert.Equal(t, "101", rooms[0].Number)
     assert.Equal(t, "102", rooms[1].Number)
@@ -372,7 +374,7 @@ func TestGetAllRooms_WithMock(t *testing.T) {
     cache.mu.RLock()
     defer cache.mu.RUnlock()
 
-    assert.Equal(t, 2, len(cache.rooms))
+    assert.Len(t, cache.rooms, 2)
     assert.Equal(t, "101", cache.rooms[1].Number)
     assert.Equal(t, "102", cache.rooms[2].Number)
 }
