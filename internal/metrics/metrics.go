@@ -2,10 +2,9 @@ package metrics
 
 import (
 	"apigateway/internal/models"
+	"log/slog"
 	"net/http"
 	"unsafe"
-
-	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
@@ -13,15 +12,15 @@ import (
 )
 
 var (
-    CacheSizeMetric = prometheus.NewGauge(prometheus.GaugeOpts{
-        Name: "cache_size",
-        Help: "Size of the cache",
-    })
+	CacheSizeMetric = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "cache_size",
+		Help: "Size of the cache",
+	})
 
-    CacheMemoryUsageMetric = prometheus.NewGauge(prometheus.GaugeOpts{
-        Name: "cache_memory_usage",
-        Help: "Memory usage of the cache",
-    })
+	CacheMemoryUsageMetric = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "cache_memory_usage",
+		Help: "Memory usage of the cache",
+	})
 )
 
 func CalculateCacheMemoryUsage(cache map[int]models.RoomDB) int64 {
@@ -32,25 +31,25 @@ func CalculateCacheMemoryUsage(cache map[int]models.RoomDB) int64 {
 	for k, v := range cache {
 		totalSize += int64(unsafe.Sizeof(k))
 		totalSize += int64(unsafe.Sizeof(v))
-	
-        if v.Number != "" {
-            totalSize += int64(len(v.Number)) 
-        }
-        if v.Floor != "" {
-            totalSize += int64(len(v.Floor)) 
-        }
-        if v.Status != "" {
-            totalSize += int64(len(v.Status)) 
-        }
-        if v.OccupiedBy != "" {
-            totalSize += int64(len(v.OccupiedBy)) 
-        }
 
-        totalSize += int64(unsafe.Sizeof(v.CheckIn))  
-        totalSize += int64(unsafe.Sizeof(v.CheckOut)) 
-    }
+		if v.Number != "" {
+			totalSize += int64(len(v.Number))
+		}
+		if v.Floor != "" {
+			totalSize += int64(len(v.Floor))
+		}
+		if v.Status != "" {
+			totalSize += int64(len(v.Status))
+		}
+		if v.OccupiedBy != "" {
+			totalSize += int64(len(v.OccupiedBy))
+		}
 
-    return totalSize
+		totalSize += int64(unsafe.Sizeof(v.CheckIn))
+		totalSize += int64(unsafe.Sizeof(v.CheckOut))
+	}
+
+	return totalSize
 }
 
 var HttpStatusMetric = prometheus.NewCounterVec(
@@ -83,7 +82,6 @@ func Init(port string) {
 			slog.Error("failed to start metrics server", "error", err)
 		}
 	}()
-
 }
 
 func UpdateCacheSizeMetric(cache map[int]models.RoomDB) {

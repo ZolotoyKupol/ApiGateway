@@ -13,15 +13,13 @@ import (
 
 type CachedRoom struct {
 	roomRepo repository.RoomProvider
-	mu 	 sync.RWMutex
+	mu       sync.RWMutex
 	rooms    map[int]models.RoomDB
-	
 }
 
 func NewCachedRoom(roomRepo repository.RoomProvider) *CachedRoom {
 	return &CachedRoom{roomRepo: roomRepo, rooms: make(map[int]models.RoomDB)}
 }
-
 
 func (c *CachedRoom) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
 	c.rooms = make(map[int]models.RoomDB)

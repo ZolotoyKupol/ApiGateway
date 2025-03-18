@@ -1,13 +1,12 @@
 package handlers
 
 import (
-	"errors"
-	"log/slog"
-	"net/http"
-
 	"apigateway/internal/apperr"
 	"apigateway/internal/models"
 	"apigateway/internal/usecase"
+	"errors"
+	"log/slog"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )

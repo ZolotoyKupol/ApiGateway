@@ -1,11 +1,12 @@
 package migrations
 
 import (
-	"embed"
-	"github.com/pkg/errors"
-	"log/slog"
 	"database/sql"
+	"embed"
+	"log/slog"
+
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/pkg/errors"
 	"github.com/pressly/goose/v3"
 )
 
@@ -23,7 +24,7 @@ func Migrate(url string) error {
 		return errors.Wrap(err, "cannot ping db")
 	}
 
-	entries,err := migrations.ReadDir(".")
+	entries, err := migrations.ReadDir(".")
 	if err != nil {
 		return errors.Wrap(err, "cannot read migrations")
 	}

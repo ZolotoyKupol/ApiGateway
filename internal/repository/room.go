@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
-
 )
 
 type RoomRepo struct {
