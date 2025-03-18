@@ -13,16 +13,16 @@ import (
 )
 
 type RoomHandler struct {
-	usecase usecase.RoomUCProvider
+	usecase usecase.RoomProvider
 	logger  *slog.Logger
 }
 
-func NewRoomHandler(usecase usecase.RoomUCProvider, logger *slog.Logger) *RoomHandler {
+func NewRoomHandler(usecase usecase.RoomProvider, logger *slog.Logger) *RoomHandler {
 	return &RoomHandler{usecase: usecase, logger: logger}
 }
 
 func (h *RoomHandler) GetAllRooms(c *gin.Context) {
-	rooms, err := h.usecase.GetRooms(c)
+	roomDB, err := h.usecase.GetRooms(c)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNoData) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "no rooms found"})
@@ -32,6 +32,7 @@ func (h *RoomHandler) GetAllRooms(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch rooms"})
 		return
 	}
+	rooms := models.ConvertToRoomResponseList(roomDB)
 	h.logger.Debug("Succesfully fetched all rooms")
 	c.JSON(http.StatusOK, rooms)
 }
@@ -71,7 +72,7 @@ func (h *RoomHandler) UpdateRoom(c *gin.Context) {
 		return
 	}
 	h.logger.Debug("room updated successfully", "id", id)
-	c.JSON(http.StatusOK, gin.H{"message": "room updated succesfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "room updated succesfully", "id": id})
 }
 
 func (h *RoomHandler) DeleteRoom(c *gin.Context) {
@@ -87,7 +88,7 @@ func (h *RoomHandler) DeleteRoom(c *gin.Context) {
 		return
 	}
 	h.logger.Debug("room deleted successfully", "id", id)
-	c.JSON(http.StatusOK, gin.H{"message": "room deleted succesfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "room deleted succesfully", "id": id})
 }
 
 func (h *RoomHandler) GetRoomByID(c *gin.Context) {
@@ -98,7 +99,7 @@ func (h *RoomHandler) GetRoomByID(c *gin.Context) {
 		return
 	}
 
-	room, err := h.usecase.GetRoomByID(c, id)
+	roomDB, err := h.usecase.GetRoomByID(c, id)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNoData) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
@@ -107,6 +108,7 @@ func (h *RoomHandler) GetRoomByID(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch room"})
 		return
 	}
+	roomResponse := roomDB.ConvertToRoomResponse()
 	h.logger.Debug("room fetched successfully", "id", id)
-	c.JSON(http.StatusOK, room)
+	c.JSON(http.StatusOK, roomResponse)
 }

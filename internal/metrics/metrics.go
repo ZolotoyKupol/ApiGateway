@@ -1,38 +1,81 @@
 package metrics
 
 import (
-	"apigateway/internal/middleware"
+	"apigateway/internal/models"
 	"net/http"
-	"runtime"
+	"unsafe"
 
 	"log/slog"
 
+	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var GoroutinesMetric = prometheus.NewGaugeFunc(
-	prometheus.GaugeOpts{
-		Name: "num_goroutines",
-		Help: "Current number of goroutines",
-	},
-	func() float64 {
-		return float64(runtime.NumGoroutine())
-	},
-)
-
-
-var CacheSizeMetric = prometheus.NewGauge(
-    prometheus.GaugeOpts{
+var (
+    CacheSizeMetric = prometheus.NewGauge(prometheus.GaugeOpts{
         Name: "cache_size",
-        Help: "Number of items in the cache",
-    },
+        Help: "Size of the cache",
+    })
+
+    CacheMemoryUsageMetric = prometheus.NewGauge(prometheus.GaugeOpts{
+        Name: "cache_memory_usage",
+        Help: "Memory usage of the cache",
+    })
 )
 
-func InitMetrics(port string) {
-	prometheus.MustRegister(GoroutinesMetric)
-	prometheus.MustRegister(middleware.HttpStatusMetric)
+func CalculateCacheMemoryUsage(cache map[int]models.RoomDB) int64 {
+	var totalSize int64
+
+	totalSize += int64(unsafe.Sizeof(cache))
+
+	for k, v := range cache {
+		totalSize += int64(unsafe.Sizeof(k))
+		totalSize += int64(unsafe.Sizeof(v))
+	
+        if v.Number != "" {
+            totalSize += int64(len(v.Number)) 
+        }
+        if v.Floor != "" {
+            totalSize += int64(len(v.Floor)) 
+        }
+        if v.Status != "" {
+            totalSize += int64(len(v.Status)) 
+        }
+        if v.OccupiedBy != "" {
+            totalSize += int64(len(v.OccupiedBy)) 
+        }
+
+        totalSize += int64(unsafe.Sizeof(v.CheckIn))  
+        totalSize += int64(unsafe.Sizeof(v.CheckOut)) 
+    }
+
+    return totalSize
+}
+
+var HttpStatusMetric = prometheus.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "http_responses_total",
+		Help: "Count of HTTP responses, labeled by status code and method",
+	},
+	[]string{"status", "method"},
+)
+
+func PrometheusMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+		statusCode := c.Writer.Status()
+		method := c.Request.Method
+		HttpStatusMetric.WithLabelValues(http.StatusText(statusCode), method).Inc()
+		slog.Debug("HTTP request processed", "status", statusCode, "method", method)
+	}
+	
+}
+
+func Init(port string) {
+	prometheus.MustRegister(HttpStatusMetric)
 	prometheus.MustRegister(CacheSizeMetric)
+	prometheus.MustRegister(CacheMemoryUsageMetric)
 
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
@@ -44,7 +87,10 @@ func InitMetrics(port string) {
 
 }
 
+func UpdateCacheSizeMetric(cache map[int]models.RoomDB) {
+	size := len(cache)
+	memory := CalculateCacheMemoryUsage(cache)
 
-func UpdateCacheSizeMetric(size int) {
 	CacheSizeMetric.Set(float64(size))
+	CacheMemoryUsageMetric.Set(float64(memory))
 }

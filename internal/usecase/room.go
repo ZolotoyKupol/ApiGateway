@@ -19,7 +19,7 @@ func NewRoomUsecase(repo repository.RoomProvider, logger *slog.Logger) *RoomUC {
 	return &RoomUC{repo: repo, logger: logger}
 }
 
-func (u *RoomUC) GetRooms(ctx context.Context) ([]models.RoomResponse, error) {
+func (u *RoomUC) GetRooms(ctx context.Context) ([]models.RoomDB, error) {
 	roomDB, err := u.repo.GetAllRooms(ctx)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNoData) {
@@ -28,10 +28,10 @@ func (u *RoomUC) GetRooms(ctx context.Context) ([]models.RoomResponse, error) {
 		u.logger.Error(err.Error())
 		return nil, errors.Wrap(err, "error fetching all rooms")
 	}
-	return models.ConvertToRoomResponseList(roomDB), nil
+	return roomDB, nil
 }
 
-func (u *RoomUC) GetRoomByID(ctx context.Context, id int) (*models.RoomResponse, error) {
+func (u *RoomUC) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, error) {
 	roomDB, err := u.repo.GetRoomByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNoData) {
@@ -40,8 +40,7 @@ func (u *RoomUC) GetRoomByID(ctx context.Context, id int) (*models.RoomResponse,
 		u.logger.Error(err.Error())
 		return nil, errors.Wrap(err, "error fetching room")
 	}
-	roomResponse := roomDB.ConvertToRoomResponse()
-	return &roomResponse, nil
+	return roomDB, nil
 }
 
 func (u *RoomUC) CreateRoom(ctx context.Context, room models.RoomDB) (int, error) {

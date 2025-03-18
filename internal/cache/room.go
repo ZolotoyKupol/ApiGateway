@@ -1,12 +1,12 @@
 package cache
 
 import (
-	"apigateway/internal/apperr"
 	"apigateway/internal/models"
 	"apigateway/internal/repository"
-	"apigateway/internal/metrics"
 	"context"
+	"github.com/pkg/errors"
 	"sync"
+	"apigateway/internal/metrics"
 )
 
 type CachedRoom struct {
@@ -32,19 +32,18 @@ func (c *CachedRoom) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
 			return nil, err
 		}
 	}
-	metrics.UpdateCacheSizeMetric(len(c.rooms))
+	metrics.UpdateCacheSizeMetric(c.rooms)
 	return c.convertMapToSlice(), nil
 }
 
 func (c *CachedRoom) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, error) {
-	room, err := c.Get(ctx, id)
-	if err == nil {
+	if room, ok := c.Get(ctx, id); ok {
 		return room, nil
 	}
 
 	dbRoom, err := c.roomRepo.GetRoomByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "not found room in cache")
 	}
 
 	c.Set(ctx, *dbRoom)
@@ -59,10 +58,9 @@ func (c *CachedRoom) CreateRoom(ctx context.Context, room models.RoomDB) (int, e
 
 	room.ID = id
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.rooms[id] = room
+	if err := c.Set(ctx, room); err != nil {
+		return 0, err
+	}
 	return id, nil
 }
 
@@ -75,6 +73,7 @@ func (c *CachedRoom) DeleteRoom(ctx context.Context, id int) error {
 	defer c.mu.Unlock()
 
 	delete(c.rooms, id)
+	metrics.UpdateCacheSizeMetric(c.rooms)
 	return nil
 }
 
@@ -87,17 +86,18 @@ func (c *CachedRoom) UpdateRoom(ctx context.Context, id int, room models.RoomDB)
 	defer c.mu.Unlock()
 
 	c.rooms[id] = room
+	metrics.UpdateCacheSizeMetric(c.rooms)
 	return nil
 }
 
-func (c *CachedRoom) Get(ctx context.Context, id int) (*models.RoomDB, error) {
+func (c *CachedRoom) Get(ctx context.Context, id int) (*models.RoomDB, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	if room, ok := c.rooms[id]; ok {
-		return &room, nil
+		return &room, true
 	}
-	return nil, apperr.ErrNoDataCache
+	return nil, false
 }
 
 func (c *CachedRoom) Set(ctx context.Context, room models.RoomDB) error {
@@ -105,6 +105,7 @@ func (c *CachedRoom) Set(ctx context.Context, room models.RoomDB) error {
 	defer c.mu.Unlock()
 
 	c.rooms[room.ID] = room
+	metrics.UpdateCacheSizeMetric(c.rooms)
 	return nil
 }
 

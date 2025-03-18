@@ -2,16 +2,17 @@ package app
 
 import (
 	"apigateway/internal/handlers"
+	"apigateway/internal/metrics"
+	"apigateway/internal/middleware"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter() *gin.Engine {
+func SetupRoutes(guestHandler handlers.GuestProvider, roomHandler handlers.RoomProvider, logger *slog.Logger) *gin.Engine {
 	router := gin.Default()
-	return router
-}
 
-func RegisterRoutes(router *gin.Engine, guestHandler handlers.GuestProvider, roomHandler handlers.RoomProvider) {
+	router.Use(metrics.PrometheusMiddleware(), middleware.LoggingMiddleware(logger))
 
 	guestGroup := router.Group("/guests")
 	guestGroup.GET("", guestHandler.GetAllGuests)
@@ -27,4 +28,5 @@ func RegisterRoutes(router *gin.Engine, guestHandler handlers.GuestProvider, roo
 	roomGroup.PUT("/:id", roomHandler.UpdateRoom)
 	roomGroup.DELETE("/:id", roomHandler.DeleteRoom)
 
+	return router
 }
