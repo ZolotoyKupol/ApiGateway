@@ -10,8 +10,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var ErrNoData = errors.New("no data")
-
 type GuestUC struct {
 	repo   repository.GuestProvider
 	logger *slog.Logger
@@ -21,15 +19,12 @@ func NewGuestUsecase(repo repository.GuestProvider, logger *slog.Logger) *GuestU
 	return &GuestUC{repo: repo, logger: logger}
 }
 
-func (g *GuestUC) GetGuests(ctx context.Context) ([]models.GuestResponse, error) {
+func (g *GuestUC) GetGuests(ctx context.Context) ([]models.GuestDB, error) {
 	guestDB, err := g.repo.GetAllGuests(ctx)
 	if err != nil {
-		if errors.Is(err, apperr.ErrNoData) {
-			return nil, apperr.ErrNoData
-		}
 		return nil, errors.Wrap(err, "error fetching all guests")
 	}
-	return models.ConvertToGuestResponseList(guestDB), nil
+	return guestDB, nil
 }
 
 func (g *GuestUC) CreateGuest(ctx context.Context, guest models.GuestDB) (int, error) {
@@ -44,7 +39,7 @@ func (g *GuestUC) UpdateGuest(ctx context.Context, id string, guest models.Guest
 	return g.repo.UpdateGuest(ctx, id, guest)
 }
 
-func (g *GuestUC) GetGuestByID(ctx context.Context, id string) (*models.GuestResponse, error) {
+func (g *GuestUC) GetGuestByID(ctx context.Context, id string) (*models.GuestDB, error) {
 	guestDB, err := g.repo.GetGuestByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNoData) {
@@ -52,6 +47,5 @@ func (g *GuestUC) GetGuestByID(ctx context.Context, id string) (*models.GuestRes
 		}
 		return nil, errors.Wrap(err, "error fetching guest")
 	}
-	guestResponse := guestDB.ConvertToGuestResponse()
-	return &guestResponse, nil
+	return guestDB, nil
 }

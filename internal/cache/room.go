@@ -1,25 +1,25 @@
 package cache
 
 import (
-	"apigateway/internal/apperr"
+	"apigateway/internal/metrics"
 	"apigateway/internal/models"
 	"apigateway/internal/repository"
-	"apigateway/internal/metrics"
 	"context"
+	"log/slog"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 type CachedRoom struct {
 	roomRepo repository.RoomProvider
-	mu 	 sync.RWMutex
+	mu       sync.RWMutex
 	rooms    map[int]models.RoomDB
-	
 }
 
 func NewCachedRoom(roomRepo repository.RoomProvider) *CachedRoom {
 	return &CachedRoom{roomRepo: roomRepo, rooms: make(map[int]models.RoomDB)}
 }
-
 
 func (c *CachedRoom) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
 	c.rooms = make(map[int]models.RoomDB)
@@ -32,22 +32,23 @@ func (c *CachedRoom) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
 			return nil, err
 		}
 	}
-	metrics.UpdateCacheSizeMetric(len(c.rooms))
+	metrics.UpdateCacheSizeMetric(c.rooms)
 	return c.convertMapToSlice(), nil
 }
 
 func (c *CachedRoom) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, error) {
-	room, err := c.Get(ctx, id)
-	if err == nil {
+	if room, ok := c.Get(ctx, id); ok {
 		return room, nil
 	}
 
 	dbRoom, err := c.roomRepo.GetRoomByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "not found room in cache")
 	}
 
-	c.Set(ctx, *dbRoom)
+	if err := c.Set(ctx, *dbRoom); err != nil {
+		slog.Debug("failed to set room in cache", "err", err)
+	}
 	return dbRoom, nil
 }
 
@@ -59,10 +60,9 @@ func (c *CachedRoom) CreateRoom(ctx context.Context, room models.RoomDB) (int, e
 
 	room.ID = id
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.rooms[id] = room
+	if err := c.Set(ctx, room); err != nil {
+		return 0, err
+	}
 	return id, nil
 }
 
@@ -75,6 +75,7 @@ func (c *CachedRoom) DeleteRoom(ctx context.Context, id int) error {
 	defer c.mu.Unlock()
 
 	delete(c.rooms, id)
+	metrics.UpdateCacheSizeMetric(c.rooms)
 	return nil
 }
 
@@ -87,17 +88,18 @@ func (c *CachedRoom) UpdateRoom(ctx context.Context, id int, room models.RoomDB)
 	defer c.mu.Unlock()
 
 	c.rooms[id] = room
+	metrics.UpdateCacheSizeMetric(c.rooms)
 	return nil
 }
 
-func (c *CachedRoom) Get(ctx context.Context, id int) (*models.RoomDB, error) {
+func (c *CachedRoom) Get(ctx context.Context, id int) (*models.RoomDB, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	if room, ok := c.rooms[id]; ok {
-		return &room, nil
+		return &room, true
 	}
-	return nil, apperr.ErrNoDataCache
+	return nil, false
 }
 
 func (c *CachedRoom) Set(ctx context.Context, room models.RoomDB) error {
@@ -105,6 +107,7 @@ func (c *CachedRoom) Set(ctx context.Context, room models.RoomDB) error {
 	defer c.mu.Unlock()
 
 	c.rooms[room.ID] = room
+	metrics.UpdateCacheSizeMetric(c.rooms)
 	return nil
 }
 

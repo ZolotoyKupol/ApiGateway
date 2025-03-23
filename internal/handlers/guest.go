@@ -1,28 +1,27 @@
 package handlers
 
 import (
-	"errors"
-	"log/slog"
-	"net/http"
-
 	"apigateway/internal/apperr"
 	"apigateway/internal/models"
 	"apigateway/internal/usecase"
+	"errors"
+	"log/slog"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type GuestHandlers struct {
-	guestUsecase usecase.GuestUCProvider
+	guestUsecase usecase.GuestProvider
 	logger       *slog.Logger
 }
 
-func NewHandlers(guestUsecase usecase.GuestUCProvider, logger *slog.Logger) *GuestHandlers {
+func NewHandlers(guestUsecase usecase.GuestProvider, logger *slog.Logger) *GuestHandlers {
 	return &GuestHandlers{guestUsecase: guestUsecase, logger: logger}
 }
 
 func (h *GuestHandlers) GetAllGuests(c *gin.Context) {
-	guests, err := h.guestUsecase.GetGuests(c)
+	guestDB, err := h.guestUsecase.GetGuests(c)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNoData) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "no guests found"})
@@ -32,6 +31,7 @@ func (h *GuestHandlers) GetAllGuests(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch guests"})
 		return
 	}
+	guests := models.ConvertToGuestResponseList(guestDB)
 	h.logger.Info("successfully handled request to fetch all guests")
 	c.JSON(http.StatusOK, guests)
 }
@@ -39,14 +39,12 @@ func (h *GuestHandlers) GetAllGuests(c *gin.Context) {
 func (h *GuestHandlers) CreateGuest(c *gin.Context) {
 	var guest models.GuestDB
 	if err := c.BindJSON(&guest); err != nil {
-		h.logger.Debug("invalid input received", "input", guest, "error", err)
-		h.logger.Warn("invalid input received", "error", err.Error(), "request body", c.Request.Body)
+		h.logger.Debug("invalid input received", "error", err, "request body", c.Request.Body)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input", "details": err.Error()})
 		return
 	}
 	h.logger.Debug("received guest data", "guest", guest)
 
-	
 	id, err := h.guestUsecase.CreateGuest(c, guest)
 	if err != nil {
 		h.logger.Error("failed to create guest", "error", err)
@@ -66,7 +64,7 @@ func (h *GuestHandlers) DeleteGuest(c *gin.Context) {
 		return
 	}
 	h.logger.Debug("guest deleted successfully", "id", id)
-	c.JSON(http.StatusOK, gin.H{"message": "guest deleted"})
+	c.JSON(http.StatusOK, gin.H{"message": "guest deleted", "id": id})
 }
 
 func (h *GuestHandlers) UpdateGuest(c *gin.Context) {
@@ -84,12 +82,12 @@ func (h *GuestHandlers) UpdateGuest(c *gin.Context) {
 		return
 	}
 	h.logger.Debug("guest updated successfully", "id", id)
-	c.JSON(http.StatusOK, gin.H{"message": "guest updated"})
+	c.JSON(http.StatusOK, gin.H{"message": "guest updated", "id": id})
 }
 
 func (h *GuestHandlers) GetGuestByID(c *gin.Context) {
 	id := c.Param("id")
-	guest, err := h.guestUsecase.GetGuestByID(c, id)
+	guestDB, err := h.guestUsecase.GetGuestByID(c, id)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNoData) {
 			h.logger.Warn("guest not found", "id", id)
@@ -100,6 +98,7 @@ func (h *GuestHandlers) GetGuestByID(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"errors": "failed to fetch guest"})
 		return
 	}
+	guestResponse := guestDB.ConvertToGuestResponse()
 	h.logger.Debug("successfully fetched guest", "id", id)
-	c.JSON(http.StatusOK, guest)
+	c.JSON(http.StatusOK, guestResponse)
 }

@@ -5,7 +5,6 @@ import (
 	"apigateway/internal/cache"
 	"apigateway/internal/handlers"
 	"apigateway/internal/metrics"
-	"apigateway/internal/middleware"
 	"apigateway/internal/repository"
 	"apigateway/internal/storage"
 	"apigateway/internal/usecase"
@@ -17,28 +16,25 @@ import (
 	"github.com/pkg/errors"
 )
 
-
-func loggerInit(level string) (*slog.Logger, slog.Level, error) {
+func loggerInit(level string) (*slog.Logger, error) {
 	logLevel := slog.LevelInfo
 	if err := logLevel.UnmarshalText([]byte(level)); err != nil {
-		return nil, logLevel, errors.Wrap(err, "failed to parse log level")
+		return nil, errors.Wrap(err, "failed to parse log level")
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
 	slog.Info(fmt.Sprintf("minimum log level set: %s", logLevel.String()))
-	return logger, logLevel,  nil
+	return logger, nil
 }
 
-
 func main() {
-	logger, logLevel, err := loggerInit(os.Getenv("LOG_LEVEL"))
+	logger, err := loggerInit(os.Getenv("LOG_LEVEL"))
 	if err != nil {
 		logger.Error("failed to initialize logger", "error", err)
 		return
 	}
 
-	logger.Debug("logger initialized", "level", logLevel)
-
+	logger.Debug("logger initialized")
 
 	connString := os.Getenv("DATABASE_URL")
 	if connString == "" {
@@ -59,10 +55,10 @@ func main() {
 	}
 	logger.Debug("db connection string", "connString", connString)
 	defer store.Close()
-	
+
 	guestRepo := repository.NewGuestRepo(store, logger)
 	roomRepo := repository.NewRoomRepo(store, logger)
-	
+
 	roomCache := cache.NewCachedRoom(roomRepo)
 
 	guestUsecase := usecase.NewGuestUsecase(guestRepo, logger)
@@ -71,17 +67,13 @@ func main() {
 	guestHandler := handlers.NewHandlers(guestUsecase, logger)
 	roomHandler := handlers.NewRoomHandler(roomUsecase, logger)
 
-	metrics.InitMetrics(os.Getenv("METRICS_PORT"))
+	metrics.Init(os.Getenv("METRICS_PORT"))
 
-	router := app.SetupRouter()
-
-	router.Use(middleware.PrometheusMiddleware(), middleware.LoggingMiddleware(logger))
-
-	app.RegisterRoutes(router, guestHandler, roomHandler)
+	router := app.SetupRoutes(guestHandler, roomHandler, logger)
 
 	logger.Info("starting server on :8080")
 	if err := router.Run(":8080"); err != nil {
 		logger.Error("failed to start server", "error", err)
-        return
+		return
 	}
 }

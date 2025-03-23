@@ -1,0 +1,25 @@
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - goimports
+    - bodyclose
+    - copyloopvar
+    - sloglint
+    - unconvert
+    - noctx
+    - gocritic
+    - testifylint
+    - goconst
+    - nilerr
+    - contextcheck
+    - whitespace
+
+    
