@@ -26,7 +26,11 @@ func TestRoomUsecase(t *testing.T) {
 
 	err = db.AutoMigrate(&models.RoomDB{})
 	require.NoError(t, err)
-	defer db.Migrator().DropTable(&models.RoomDB{})
+	defer func() {
+		if err := db.Migrator().DropTable(&models.RoomDB{}); err != nil {
+			t.Fatalf("failed to drop table: %v", err)
+		}
+	}()
 
 	storage, err := storage.NewStorage(connString)
 	require.NoError(t, err)
@@ -61,7 +65,7 @@ func TestRoomUsecase(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, room.Number, createdRoom.Number)
 		assert.Equal(t, room.Floor, createdRoom.Floor)
-		assert.Equal(t, room.RoomSize, createdRoom.RoomSize)
+		assert.InEpsilon(t, room.RoomSize, createdRoom.RoomSize, 0.0001)
 		assert.Equal(t, room.Status, createdRoom.Status)
 		assert.Equal(t, room.OccupiedBy, createdRoom.OccupiedBy)
 	})
@@ -81,7 +85,7 @@ func TestRoomUsecase(t *testing.T) {
 		assert.NotNil(t, room)
 		assert.Equal(t, "101", room.Number)
 		assert.Equal(t, "1", room.Floor)
-		assert.Equal(t, 20.0, room.RoomSize)
+		assert.InEpsilon(t, 20.0, room.RoomSize, 0.0001)
 		assert.Equal(t, "available", room.Status)
 		assert.Equal(t, "", room.OccupiedBy)
 	})
@@ -107,7 +111,7 @@ func TestRoomUsecase(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, updatedData.Number, updatedRoom.Number)
 		assert.Equal(t, updatedData.Floor, updatedRoom.Floor)
-		assert.Equal(t, updatedData.RoomSize, updatedRoom.RoomSize)
+		assert.InEpsilon(t, updatedData.RoomSize, updatedRoom.RoomSize, 0.0001)
 		assert.Equal(t, updatedData.Status, updatedRoom.Status)
 		assert.Equal(t, updatedData.OccupiedBy, updatedRoom.OccupiedBy)
 	})
@@ -118,7 +122,6 @@ func TestRoomUsecase(t *testing.T) {
 
 		err = uc.DeleteRoom(ctx, id)
 		require.NoError(t, err)
-
 		_, err = uc.GetRoomByID(ctx, id)
 		assert.ErrorIs(t, err, apperr.ErrNoData)
 	})

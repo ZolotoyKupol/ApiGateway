@@ -81,12 +81,6 @@ jobs:
             sleep 2
           done
 
-      - name: Run database migrations
-        run: |
-          # Если у вас есть скрипт для миграций, выполните его здесь
-          # Например, если вы используете GORM AutoMigrate:
-          go run ./cmd/migrate/main.go
-
       - name: Run tests
         env:
           DB_HOST: localhost
