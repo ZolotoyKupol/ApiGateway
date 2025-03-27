@@ -3,10 +3,10 @@ name: CI Pipeline
 on:
   push:
     branches:
-      - refact
+      - '*'
   pull_request:
     branches:
-      - refact
+      - '*'
 
 jobs:
   lint:
@@ -42,6 +42,21 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:14.10-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -59,6 +74,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL to start..."
+            sleep 2
+          done
+
+      - name: Run database migrations
+        run: |
+          # Если у вас есть скрипт для миграций, выполните его здесь
+          # Например, если вы используете GORM AutoMigrate:
+          go run ./cmd/migrate/main.go
+
       - name: Run tests
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: postgres
         run: |
           go test ./... -v -cover -coverprofile=coverage.out
