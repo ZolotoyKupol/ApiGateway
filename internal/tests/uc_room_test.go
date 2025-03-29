@@ -26,9 +26,8 @@ func TestRoomUsecase(t *testing.T) {
 
 	err = db.AutoMigrate(&models.RoomDB{})
 	require.NoError(t, err)
-	
 	tx := db.Begin()
-	defer func ()  {
+	defer func() {
 		tx.Rollback()
 	}()
 
