@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel"
 )
 
 type RoomHandler struct {
@@ -22,7 +23,10 @@ func NewRoomHandler(usecase usecase.RoomProvider, logger *slog.Logger) *RoomHand
 }
 
 func (h *RoomHandler) GetAllRooms(c *gin.Context) {
-	roomDB, err := h.usecase.GetRooms(c)
+	ctx, span := otel.Tracer("RoomHandler").Start(c.Request.Context(), "Handler.GetAllRooms")
+	defer span.End()
+
+	roomDB, err := h.usecase.GetRooms(ctx)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNoData) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "no rooms found"})
@@ -38,13 +42,16 @@ func (h *RoomHandler) GetAllRooms(c *gin.Context) {
 }
 
 func (h *RoomHandler) CreateRoom(c *gin.Context) {
+	ctx, span := otel.Tracer("RoomHandler").Start(c.Request.Context(), "Handler.CreateRoom")
+	defer span.End()
+
 	var room models.RoomDB
 	if err := c.ShouldBindJSON(&room); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 
-	id, err := h.usecase.CreateRoom(c, room)
+	id, err := h.usecase.CreateRoom(ctx, room)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create room"})
 		return
@@ -54,6 +61,9 @@ func (h *RoomHandler) CreateRoom(c *gin.Context) {
 }
 
 func (h *RoomHandler) UpdateRoom(c *gin.Context) {
+	ctx, span := otel.Tracer("RoomHandler").Start(c.Request.Context(), "Handler.UpdateRoom")
+	defer span.End()
+
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -67,7 +77,7 @@ func (h *RoomHandler) UpdateRoom(c *gin.Context) {
 		return
 	}
 
-	if err := h.usecase.UpdateRoom(c, id, room); err != nil {
+	if err := h.usecase.UpdateRoom(ctx, id, room); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update room"})
 		return
 	}
@@ -76,6 +86,9 @@ func (h *RoomHandler) UpdateRoom(c *gin.Context) {
 }
 
 func (h *RoomHandler) DeleteRoom(c *gin.Context) {
+	ctx, span := otel.Tracer("RoomHandler").Start(c.Request.Context(), "Handler.DeleteRoom")
+	defer span.End()
+
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -83,7 +96,7 @@ func (h *RoomHandler) DeleteRoom(c *gin.Context) {
 		return
 	}
 
-	if err := h.usecase.DeleteRoom(c, id); err != nil {
+	if err := h.usecase.DeleteRoom(ctx, id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete room"})
 		return
 	}
@@ -92,6 +105,9 @@ func (h *RoomHandler) DeleteRoom(c *gin.Context) {
 }
 
 func (h *RoomHandler) GetRoomByID(c *gin.Context) {
+	ctx, span := otel.Tracer("RoomHandler").Start(c.Request.Context(), "Handler.GetRoomByID")
+	defer span.End()
+
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -99,7 +115,7 @@ func (h *RoomHandler) GetRoomByID(c *gin.Context) {
 		return
 	}
 
-	roomDB, err := h.usecase.GetRoomByID(c, id)
+	roomDB, err := h.usecase.GetRoomByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNoData) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel"
 	"gorm.io/gorm"
 )
 
@@ -21,6 +22,9 @@ func NewRoomRepo(store *storage.Storage, logger *slog.Logger) *RoomRepo {
 }
 
 func (r *RoomRepo) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
+	ctx, span := otel.Tracer("RoomRepo").Start(ctx, "Repository.GetAllRooms")
+	defer span.End()
+
 	var rooms []models.RoomDB
 	err := r.store.DB().WithContext(ctx).Find(&rooms).Error
 	if err != nil {
@@ -32,6 +36,9 @@ func (r *RoomRepo) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
 }
 
 func (r *RoomRepo) CreateRoom(ctx context.Context, room models.RoomDB) (int, error) {
+	ctx, span := otel.Tracer("RoomRepo").Start(ctx, "Repository.CreateRoom")
+	defer span.End()
+
 	err := r.store.DB().WithContext(ctx).Create(&room).Error
 	if err != nil {
 		r.logger.Error("failed to create room", "error", err)
@@ -42,6 +49,9 @@ func (r *RoomRepo) CreateRoom(ctx context.Context, room models.RoomDB) (int, err
 }
 
 func (r *RoomRepo) UpdateRoom(ctx context.Context, id int, room models.RoomDB) error {
+	ctx, span := otel.Tracer("RoomRepo").Start(ctx, "Repository.UpdateRoom")
+	defer span.End()
+
 	err := r.store.DB().WithContext(ctx).Model(&models.RoomDB{}).Where("id = ?", id).Updates(room).Error
 	if err != nil {
 		r.logger.Error("failed to update room", "error", err)
@@ -52,6 +62,9 @@ func (r *RoomRepo) UpdateRoom(ctx context.Context, id int, room models.RoomDB) e
 }
 
 func (r *RoomRepo) DeleteRoom(ctx context.Context, id int) error {
+	ctx, span := otel.Tracer("RoomRepo").Start(ctx, "Repository.DeleteRoom")
+	defer span.End()
+
 	err := r.store.DB().WithContext(ctx).Where("id = ?", id).Delete(&models.RoomDB{}).Error
 	if err != nil {
 		r.logger.Error("failed to delete room", "error", err)
@@ -62,6 +75,9 @@ func (r *RoomRepo) DeleteRoom(ctx context.Context, id int) error {
 }
 
 func (r *RoomRepo) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, error) {
+	ctx, span := otel.Tracer("RoomRepo").Start(ctx, "Repository.GetRoomByID")
+	defer span.End()
+
 	var room models.RoomDB
 	err := r.store.DB().WithContext(ctx).Where("id = ?", id).First(&room).Error
 	if err != nil {

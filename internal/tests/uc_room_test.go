@@ -26,14 +26,13 @@ func TestRoomUsecase(t *testing.T) {
 
 	err = db.AutoMigrate(&models.RoomDB{})
 	require.NoError(t, err)
-	defer func() {
-		if err := db.Migrator().DropTable(&models.RoomDB{}); err != nil {
-			t.Fatalf("failed to drop table: %v", err)
-		}
+	
+	tx := db.Begin()
+	defer func ()  {
+		tx.Rollback()
 	}()
 
-	storage, err := storage.NewStorage(connString)
-	require.NoError(t, err)
+	storage := storage.NewStorageWithDB(tx)
 	defer storage.Close()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{

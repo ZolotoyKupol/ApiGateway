@@ -7,6 +7,7 @@ import (
 	"apigateway/internal/metrics"
 	"apigateway/internal/repository"
 	"apigateway/internal/storage"
+	"apigateway/internal/tracing"
 	"apigateway/internal/usecase"
 	"apigateway/migrations"
 	"fmt"
@@ -35,6 +36,9 @@ func main() {
 	}
 
 	logger.Debug("logger initialized")
+
+	shutdown := tracing.InitTracer("api-gateway")
+	defer shutdown()
 
 	connString := os.Getenv("DATABASE_URL")
 	if connString == "" {

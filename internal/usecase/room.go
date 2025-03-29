@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel"
 )
 
 type RoomUC struct {
@@ -20,6 +21,9 @@ func NewRoomUsecase(repo repository.RoomProvider, logger *slog.Logger) *RoomUC {
 }
 
 func (u *RoomUC) GetRooms(ctx context.Context) ([]models.RoomDB, error) {
+	ctx, span := otel.Tracer("RoomUC").Start(ctx, "Usecase.GetRooms")
+	defer span.End()
+
 	roomDB, err := u.repo.GetAllRooms(ctx)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNoData) {
@@ -32,6 +36,9 @@ func (u *RoomUC) GetRooms(ctx context.Context) ([]models.RoomDB, error) {
 }
 
 func (u *RoomUC) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, error) {
+	ctx, span := otel.Tracer("RoomUC").Start(ctx, "Usecase.GetRoomByID")
+	defer span.End()
+
 	roomDB, err := u.repo.GetRoomByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, apperr.ErrNoData) {
@@ -44,13 +51,19 @@ func (u *RoomUC) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, error
 }
 
 func (u *RoomUC) CreateRoom(ctx context.Context, room models.RoomDB) (int, error) {
+	ctx, span := otel.Tracer("RoomUC").Start(ctx, "Usecase.CreateRoom")
+	defer span.End()
 	return u.repo.CreateRoom(ctx, room)
 }
 
 func (u *RoomUC) DeleteRoom(ctx context.Context, id int) error {
+	ctx, span := otel.Tracer("RoomUC").Start(ctx, "Usecase.DeleteRoom")
+	defer span.End()
 	return u.repo.DeleteRoom(ctx, id)
 }
 
 func (u *RoomUC) UpdateRoom(ctx context.Context, id int, room models.RoomDB) error {
+	ctx, span := otel.Tracer("RoomUC").Start(ctx, "Usecase.UpdateRoom")
+	defer span.End()
 	return u.repo.UpdateRoom(ctx, id, room)
 }

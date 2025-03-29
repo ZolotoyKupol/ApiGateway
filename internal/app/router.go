@@ -7,10 +7,13 @@ import (
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 func SetupRoutes(guestHandler handlers.GuestProvider, roomHandler handlers.RoomProvider, logger *slog.Logger) *gin.Engine {
 	router := gin.Default()
+
+	router.Use(otelgin.Middleware("api-gateway"))
 
 	router.Use(metrics.PrometheusMiddleware(), middleware.LoggingMiddleware(logger))
 

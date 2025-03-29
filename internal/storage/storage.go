@@ -19,6 +19,10 @@ func NewStorage(connString string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
+func NewStorageWithDB(db *gorm.DB) *Storage {
+	return &Storage{db: db}
+}
+
 func (s *Storage) DB() *gorm.DB {
 	return s.db
 }

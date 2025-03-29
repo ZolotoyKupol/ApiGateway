@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"go.opentelemetry.io/otel"
 )
 
 type CachedRoom struct {
@@ -22,6 +23,9 @@ func NewCachedRoom(roomRepo repository.RoomProvider) *CachedRoom {
 }
 
 func (c *CachedRoom) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
+	ctx, span := otel.Tracer("CachedRoom").Start(ctx, "CachedRoom.GetAllRooms")
+	defer span.End()
+
 	c.rooms = make(map[int]models.RoomDB)
 	if len(c.rooms) == 0 {
 		rooms, err := c.roomRepo.GetAllRooms(ctx)
@@ -37,6 +41,9 @@ func (c *CachedRoom) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
 }
 
 func (c *CachedRoom) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, error) {
+	ctx, span := otel.Tracer("CachedRoom").Start(ctx, "CachedRoom.GetRoomByID")
+	defer span.End()
+
 	if room, ok := c.Get(ctx, id); ok {
 		return room, nil
 	}
@@ -53,6 +60,9 @@ func (c *CachedRoom) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, e
 }
 
 func (c *CachedRoom) CreateRoom(ctx context.Context, room models.RoomDB) (int, error) {
+	ctx, span := otel.Tracer("CachedRoom").Start(ctx, "CachedRoom.CreateRoom")
+	defer span.End()
+
 	id, err := c.roomRepo.CreateRoom(ctx, room)
 	if err != nil {
 		return 0, err
@@ -67,6 +77,9 @@ func (c *CachedRoom) CreateRoom(ctx context.Context, room models.RoomDB) (int, e
 }
 
 func (c *CachedRoom) DeleteRoom(ctx context.Context, id int) error {
+	ctx, span := otel.Tracer("CachedRoom").Start(ctx, "CachedRoom.DeleteRoom")
+	defer span.End()
+
 	err := c.roomRepo.DeleteRoom(ctx, id)
 	if err != nil {
 		return err
@@ -80,6 +93,9 @@ func (c *CachedRoom) DeleteRoom(ctx context.Context, id int) error {
 }
 
 func (c *CachedRoom) UpdateRoom(ctx context.Context, id int, room models.RoomDB) error {
+	ctx, span := otel.Tracer("CachedRoom").Start(ctx, "CachedRoom.UpdateRoom")
+	defer span.End()
+
 	err := c.roomRepo.UpdateRoom(ctx, id, room)
 	if err != nil {
 		return err
