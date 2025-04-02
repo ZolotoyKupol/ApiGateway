@@ -26,18 +26,7 @@ func (c *CachedRoom) GetAllRooms(ctx context.Context) ([]models.RoomDB, error) {
 	ctx, span := otel.Tracer("CachedRoom").Start(ctx, "CachedRoom.GetAllRooms")
 	defer span.End()
 
-	c.rooms = make(map[int]models.RoomDB)
-	if len(c.rooms) == 0 {
-		rooms, err := c.roomRepo.GetAllRooms(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if err := c.SetAll(ctx, rooms); err != nil {
-			return nil, err
-		}
-	}
-	metrics.UpdateCacheSizeMetric(c.rooms)
-	return c.convertMapToSlice(), nil
+	return c.roomRepo.GetAllRooms(ctx)
 }
 
 func (c *CachedRoom) GetRoomByID(ctx context.Context, id int) (*models.RoomDB, error) {
@@ -125,14 +114,6 @@ func (c *CachedRoom) Set(ctx context.Context, room models.RoomDB) error {
 	c.rooms[room.ID] = room
 	metrics.UpdateCacheSizeMetric(c.rooms)
 	return nil
-}
-
-func (c *CachedRoom) convertMapToSlice() []models.RoomDB {
-	rooms := make([]models.RoomDB, 0, len(c.rooms))
-	for _, room := range c.rooms {
-		rooms = append(rooms, room)
-	}
-	return rooms
 }
 
 func (c *CachedRoom) SetAll(ctx context.Context, rooms []models.RoomDB) error {
